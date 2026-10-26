@@ -3,12 +3,22 @@ Unit tests for geometric metric calculations (EAR, MAR, solvePnP).
 """
 
 import math
-from metrics import calculate_ear, calculate_mar, euclidean_dist
+from metrics import calculate_ear, calculate_eye_gaze_ratio, calculate_mar, euclidean_dist
 
 
 def test_euclidean_distance():
     assert euclidean_dist((0, 0), (3, 4)) == 5.0
     assert euclidean_dist((1, 1), (1, 1)) == 0.0
+
+
+def test_gaze_ratio():
+    # Center gaze
+    gaze_center = calculate_eye_gaze_ratio((5.0, 5.0), (0.0, 5.0), (10.0, 5.0))
+    assert 0.45 <= gaze_center <= 0.55, f"Expected center gaze ~0.5, got {gaze_center}"
+
+    # Looking to side
+    gaze_side = calculate_eye_gaze_ratio((2.0, 5.0), (0.0, 5.0), (10.0, 5.0))
+    assert gaze_side < 0.35, f"Expected lateral gaze < 0.35, got {gaze_side}"
 
 
 def test_ear_calculation():
@@ -51,4 +61,5 @@ if __name__ == "__main__":
     test_euclidean_distance()
     test_ear_calculation()
     test_mar_calculation()
+    test_gaze_ratio()
     print("All metric tests passed successfully!")
