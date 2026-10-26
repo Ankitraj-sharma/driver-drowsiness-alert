@@ -17,6 +17,7 @@ import streamlit as st
 
 from alert_engine import AlertEngine, DriverStatus, trigger_browser_alarm
 from analytics import ear_mar_time_series, incidents_dataframe, vigilance_gauge
+from calibration import DriverCalibrator
 from config import DetectionThresholds
 from face_tracker import FaceTracker
 from live_stream import RTC_CONFIGURATION, LiveDrowsinessProcessor
@@ -417,17 +418,53 @@ with tab_telemetry:
 # ─────────────────────────────────────────────────────────────────────
 with tab_calibrate:
     st.markdown("### 🎛️ Driver Baseline Sensitivity Calibration")
-    st.markdown(
-        """
-        Different drivers naturally have different eye shapes, eyelid droop, and blink dynamics.
-        Use this guide to tune the system for zero false-alarms:
+    st.caption("Perform an empirical 2-step biometric calibration to eliminate false alarms and personalize thresholds.")
 
-        1. **Standard Eyes**: Default EAR of `0.22` works reliably for 95% of daylight scenarios.
-        2. **Glasses & Glare**: Reflections on lenses slightly lower the computed EAR. Reduce threshold to `0.20`.
-        3. **Night Driving**: In low ambient light, shadows inside eye sockets increase contrast; set EAR to `0.24`.
-        4. **False Positive Yawning**: If normal speaking triggers yawning alerts, increase MAR threshold to `0.70`+.
-        """
-    )
+    if "calibrator" not in st.session_state:
+        st.session_state.calibrator = DriverCalibrator(sample_size=20)
+
+    calib = st.session_state.calibrator
+    driver_name = st.text_input("Driver Name / Identifier", value="Driver 1")
+
+    cal1, cal2 = st.columns(2)
+    with cal1:
+        st.markdown("#### Step 1: Open Eyes (Wakeful Baseline)")
+        st.write("Look directly at the screen with relaxed, natural eyes.")
+        if st.button("📸 Capture Awake Sample", key="btn_awake"):
+            current_ear = list(st.session_state.ear_history)[-1] if st.session_state.ear_history else 0.30
+            is_full = calib.add_open_sample(current_ear)
+            st.success(f"Sample #{len(calib.open_samples)} added: EAR = {current_ear:.3f}")
+            if is_full:
+                st.balloons()
+        st.progress(min(1.0, len(calib.open_samples) / 20.0), text=f"Samples: {len(calib.open_samples)} / 20")
+
+    with cal2:
+        st.markdown("#### Step 2: Closed Eyes (Resting Baseline)")
+        st.write("Close your eyes gently for calibration measurement.")
+        if st.button("📸 Capture Closed Eye Sample", key="btn_closed"):
+            current_ear = list(st.session_state.ear_history)[-1] if st.session_state.ear_history else 0.12
+            is_full = calib.add_closed_sample(current_ear)
+            st.success(f"Sample #{len(calib.closed_samples)} added: EAR = {current_ear:.3f}")
+            if is_full:
+                st.balloons()
+        st.progress(min(1.0, len(calib.closed_samples) / 20.0), text=f"Samples: {len(calib.closed_samples)} / 20")
+
+    st.markdown("---")
+    if len(calib.open_samples) >= 5 and len(calib.closed_samples) >= 5:
+        profile = calib.compute_profile(driver_name)
+        if profile:
+            st.success(f"### ✅ Calibration Profile Generated for {profile.driver_name}")
+            cp1, cp2, cp3 = st.columns(3)
+            cp1.metric("Awake EAR Baseline", f"{profile.baseline_open_ear:.3f}")
+            cp2.metric("Closed EAR Baseline", f"{profile.baseline_closed_ear:.3f}")
+            cp3.metric("🎯 Recommended EAR Threshold", f"{profile.recommended_threshold:.3f}")
+            st.info(f"💡 Recommended threshold is **{profile.recommended_threshold:.3f}**. You can set this in the left sidebar slider!")
+    else:
+        st.info("Take at least 5 awake samples and 5 closed samples to calculate your personalized profile.")
+
+    if st.button("🔄 Reset Calibration Data"):
+        calib.reset()
+        st.rerun()
 
 # ─────────────────────────────────────────────────────────────────────
 #  TAB 5 : Research & Mathematical Foundations
