@@ -28,6 +28,34 @@ except Exception:
     _MEDIAPIPE_AVAILABLE = False
 
 
+def _safe_load_cascade(filename: str):
+    """Safely loads OpenCV cascade without raising AttributeError if cv2.data is missing."""
+    try:
+        if hasattr(cv2, "data") and hasattr(cv2.data, "haarcascades") and cv2.data.haarcascades:
+            cas = cv2.CascadeClassifier(cv2.data.haarcascades + filename)
+            if not cas.empty():
+                return cas
+    except Exception:
+        pass
+    try:
+        import os
+        cv2_dir = os.path.dirname(cv2.__file__)
+        cand = os.path.join(cv2_dir, "data", filename)
+        if os.path.exists(cand):
+            cas = cv2.CascadeClassifier(cand)
+            if not cas.empty():
+                return cas
+    except Exception:
+        pass
+    try:
+        cas = cv2.CascadeClassifier(filename)
+        if not cas.empty():
+            return cas
+    except Exception:
+        pass
+    return None
+
+
 class FaceTracker:
     """
     Tracks facial landmarks, calculates EAR/MAR/Head Pose, and overlays an AR HUD.
@@ -40,9 +68,7 @@ class FaceTracker:
         min_tracking_confidence: float = 0.5,
     ) -> None:
         self.use_mediapipe = _MEDIAPIPE_AVAILABLE
-        self.face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        )
+        self.face_cascade = _safe_load_cascade("haarcascade_frontalface_default.xml")
         if self.use_mediapipe:
             self.mesh_detector = mp_face_mesh.FaceMesh(
                 max_num_faces=max_num_faces,
@@ -179,9 +205,9 @@ class FaceTracker:
         """Lightweight OpenCV Haar Cascade fallback detector."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         if self.face_cascade is None or self.face_cascade.empty():
-            self.face_cascade = cv2.CascadeClassifier(
-                cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-            )
+            self.face_cascade = _safe_load_cascade("haarcascade_frontalface_default.xml")
+        if self.face_cascade is None or self.face_cascade.empty():
+            return out_frame, None
         faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
 
         if len(faces) == 0:
