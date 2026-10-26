@@ -18,6 +18,23 @@ def euclidean_dist(p1: tuple[float, float], p2: tuple[float, float]) -> float:
     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
 
 
+def calculate_eye_gaze_ratio(
+    pupil_pt: tuple[float, float],
+    inner_corner: tuple[float, float],
+    outer_corner: tuple[float, float],
+) -> float:
+    """
+    Calculate horizontal eye gaze ratio within the palpebral fissure.
+    ~0.5 = forward roadway gaze, <0.35 or >0.65 = lateral peripheral distraction.
+    """
+    d_inner = euclidean_dist(pupil_pt, inner_corner)
+    d_outer = euclidean_dist(pupil_pt, outer_corner)
+    total_width = d_inner + d_outer
+    if total_width < 1e-6:
+        return 0.5
+    return round(float(d_inner / total_width), 3)
+
+
 def calculate_ear(eye_points: list[tuple[float, float]]) -> float:
     """
     Compute Eye Aspect Ratio (EAR) based on Soukupová and Čech (2016).
