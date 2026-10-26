@@ -200,6 +200,7 @@ with st.sidebar:
 
     enable_audio = st.checkbox("🔊 Web Audio Siren Buzzer", value=True)
     enable_voice = st.checkbox("🗣️ Spoken Voice Safety Alerts", value=True)
+    enable_night_ir = st.checkbox("🌙 Night Vision (NIR Contrast Mode)", value=False)
 
     thresholds = DetectionThresholds(
         ear_threshold=ear_thresh,
@@ -256,6 +257,7 @@ with tab_live:
 
         if ctx.video_processor:
             ctx.video_processor.update_thresholds(thresholds)
+            ctx.video_processor.night_mode = enable_night_ir
 
     with col_telemetry:
         st.markdown("#### ⚡ Live Cockpit Telemetry")
