@@ -51,6 +51,7 @@ class LiveDrowsinessProcessor(VideoProcessorBase):
         self.vigilance_score: int = 100
         self.status: DriverStatus = DriverStatus.NORMAL
         self.should_alarm: bool = False
+        self.night_mode: bool = False
 
         # Performance monitoring
         self._frame_count: int = 0
@@ -64,6 +65,13 @@ class LiveDrowsinessProcessor(VideoProcessorBase):
         """Process incoming webcam frame and overlay cockpit HUD."""
         img = frame.to_ndarray(format="bgr24")
         h, w = img.shape[:2]
+
+        # Apply NIR (Near-Infrared) low-light enhancement if night mode active
+        if self.night_mode:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+            enhanced = clahe.apply(gray)
+            img = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
 
         # Calculate FPS
         now = time.time()
