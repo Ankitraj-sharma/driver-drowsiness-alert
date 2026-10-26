@@ -246,6 +246,9 @@ with tab_live:
     col_video, col_telemetry = st.columns([1.5, 1.0])
 
     with col_video:
+        if ctx.state.playing and ctx.video_processor and ctx.video_processor.should_alarm:
+            st.error("🚨 CRITICAL WARNING: MICRO-SLEEP / DISTRACTION HAZARD! EYES ON ROAD! 🚨")
+
         ctx = webrtc_streamer(
             key="drowsyguard-live-stream",
             mode=WebRtcMode.SENDRECV,
