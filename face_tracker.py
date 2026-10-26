@@ -40,6 +40,9 @@ class FaceTracker:
         min_tracking_confidence: float = 0.5,
     ) -> None:
         self.use_mediapipe = _MEDIAPIPE_AVAILABLE
+        self.face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
         if self.use_mediapipe:
             self.mesh_detector = mp_face_mesh.FaceMesh(
                 max_num_faces=max_num_faces,
@@ -175,10 +178,11 @@ class FaceTracker:
     ) -> tuple[np.ndarray, Optional[dict]]:
         """Lightweight OpenCV Haar Cascade fallback detector."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        face_cascade = cv2.CascadeClassifier(
-            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        )
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+        if self.face_cascade is None or self.face_cascade.empty():
+            self.face_cascade = cv2.CascadeClassifier(
+                cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+            )
+        faces = self.face_cascade.detectMultiScale(gray, 1.3, 5)
 
         if len(faces) == 0:
             return out_frame, None

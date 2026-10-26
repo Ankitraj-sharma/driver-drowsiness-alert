@@ -246,9 +246,6 @@ with tab_live:
     col_video, col_telemetry = st.columns([1.5, 1.0])
 
     with col_video:
-        if ctx.state.playing and ctx.video_processor and ctx.video_processor.should_alarm:
-            st.error("🚨 CRITICAL WARNING: MICRO-SLEEP / DISTRACTION HAZARD! EYES ON ROAD! 🚨")
-
         ctx = webrtc_streamer(
             key="drowsyguard-live-stream",
             mode=WebRtcMode.SENDRECV,
@@ -258,9 +255,11 @@ with tab_live:
             async_processing=True,
         )
 
-        if ctx.video_processor:
+        if ctx.state.playing and ctx.video_processor:
             ctx.video_processor.update_thresholds(thresholds)
             ctx.video_processor.night_mode = enable_night_ir
+            if ctx.video_processor.should_alarm:
+                st.error("🚨 CRITICAL WARNING: MICRO-SLEEP / DISTRACTION HAZARD! EYES ON ROAD! 🚨")
 
     with col_telemetry:
         st.markdown("#### ⚡ Live Cockpit Telemetry")
